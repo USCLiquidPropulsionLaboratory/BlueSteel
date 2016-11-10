@@ -1,0 +1,451 @@
+#include <FileIO.h>
+#include <Bridge.h>
+#include <YunServer.h>
+#include <YunClient.h>
+#include <SPI.h>
+
+// Output Pin Definithions
+const int ledPin = 13; // the pin that the LED is attached to
+const int sol1 = 2;
+const int sol2 = 3;
+const int sol3 = 4;
+const int sol4 = 5;
+const int pyro_arm = 6;
+const int pyro_fire = 7;
+const int pyro_status = 8;
+const int pyro_test = 9;
+const byte RESET = 0xFF;
+const byte ON = 0x80;
+const byte READ_ONLY = 0x00;
+const byte WAIT = 75;
+const byte GAIN = 128;
+
+const byte WRITE_CONFIG = 0b00010000;
+//Bipolar Configurations
+const byte CONFIG[3] = {0b10000000, 0b00000001, 0b00010111};  // Test Configuration (Gain = 128)
+//const byte CONFIG[3] = {0b10000000, 0b00000001, 0b00010000};  // Modified Configuration: Gain = 1
+//const byte CONFIG[3] = {0b10000000, 0b00000001, 0b00010001};  // Modified Configuration: Gain = 2
+
+//Unipolar Configurations
+//const byte CONFIG[3] = {0b10010000, 0b00000001, 0b00010000};  // Modified Configuration: Gain = 1, Reference V monopolar
+//const byte CONFIG[3] = {0b10010000, 0b00000001, 0b00010001};  // Modified Configuration: Gain = 2, Reference V monopolar
+//const byte CONFIG[3] = {0b10010000, 0b00000001, 0b00010111};  // Modified Configuration: Gain = 128, Reference V monopolar
+
+
+const byte WRITE_MODE  = 0b00001000;
+//const byte MODE[3] = {0b00101000, 0b00000100, 0b01010000};    // Test Mode
+
+
+const byte MODE[3] = {0b00001000, 0b00000100, 0b00000101};    // Modified Mode: Continuous Conversion Mode, Filter Word of 5
+//const byte MODE[3] = {0b00001000, 0b00000100, 0b01010000};    // Modified Mode: Continuous Conversion Mode, Filter Word of 80
+//const byte MODE[3] = {0b00001000, 0b00000111, 0xFF};    // Modified Mode: Continuous Conversion Mode and Filter Word of 1023
+
+
+const byte CALIBRATE_MODE[3] = {0b11001000, 0b00000111, 0xFF};    // Modified Mode: Continuous Conversion Mode and Filter Word of 1023
+
+const byte EX_MODE[3] = {0x28, 0x00, 0x60};
+
+const byte READ_MODE   = 0b01001000;
+const byte READ_CONFIG = 0b01010000;
+const byte READ_STATUS = 0b01000000;
+
+//Used to hold bytes of input
+byte in[3];
+long output;
+float voltage, weight;
+
+
+/*
+// Output Pind Definitions
+const int A9 = 9;
+const int A10 = 10;
+const int A11 = 12;
+*/
+
+// Parameters
+const int record_interval = 10;
+
+int incomingByte;      // a variable to read incoming serial data into
+int last_record = 0;
+unsigned long current_time;
+unsigned long write_time;
+unsigned long record_start_time;
+boolean record = false;
+boolean file_closed = true;
+String event_log = "";
+
+YunServer server;
+
+void setup() {
+  // initialize communication:
+  Bridge.begin();
+  server.listenOnLocalhost();
+  server.begin();
+  
+  // start the SPI library:
+  delay(1);
+  SPI.begin();
+  SPI.setDataMode(SPI_MODE3);
+  SPI.setBitOrder(MSBFIRST);
+  SPI.setClockDivider(SPI_CLOCK_DIV4);
+  
+  // Start serial for debug
+  //Serial.begin(115200);
+  
+  // Run ADC initialization code
+  ADC_Setup();
+  
+  // Output Initializations
+  pinMode(sol1, OUTPUT);  // Pin 0 used by bridge, using pin 8
+  pinMode(sol2, OUTPUT);  // Pin 1 used by bridge, using pin 11
+  pinMode(sol3, OUTPUT);
+  pinMode(sol4, OUTPUT);
+  pinMode(pyro_arm, OUTPUT);
+  pinMode(pyro_fire, OUTPUT);
+  pinMode(pyro_status, INPUT);
+  pinMode(pyro_test, OUTPUT);
+  
+  
+  // Input Initializations
+  pinMode(A0, INPUT);  // P1
+  pinMode(A1, INPUT);  // P2
+  pinMode(A2, INPUT);  // P3
+  pinMode(A3, INPUT);  // P4
+  pinMode(A4, INPUT);  // P5
+  pinMode(A5, INPUT);  // P6
+  pinMode(A11, INPUT); // P7
+  pinMode(A10, INPUT); // NTC1
+  
+  
+  // initialize file
+  FileSystem.begin();
+}
+
+
+void loop()
+{
+  // Get clients coming from server
+  YunClient client = server.accept();
+  
+  // Check for new client
+  if (client)
+  {
+    process(client);
+    
+    //end client connection
+    client.stop();
+  }
+  if (record)
+  {
+    read_inputs();
+  }
+}
+
+
+/*
+ * Used to record selected digital inputs to SD Card
+ */
+void read_inputs()
+{
+  //Serial.println("  Reading inputs");
+  current_time = millis();
+  if( (current_time - last_record) > record_interval)
+  {
+    File output = FileSystem.open("/mnt/sd/arduino/www/output.csv", FILE_APPEND);
+    if(output)
+    {
+      String dataOutput = "";
+      for(int i = 0; i < 5; i++)
+      {
+        current_time = millis();
+             
+        dataOutput += String(current_time - record_start_time) + ",";
+        //
+        dataOutput += String(analogRead(A0)) + ",";
+        dataOutput += String(analogRead(A1)) + ",";
+        dataOutput += String(analogRead(A2)) + ",";
+        dataOutput += String(analogRead(A3)) + ",";
+        dataOutput += String(analogRead(A4)) + ",";
+        dataOutput += String(analogRead(A5)) + ",";
+        dataOutput += String(analogRead(A11)) + ",";
+        
+        /*
+        dataOutput += String(analogRead(A0) * 1.1358 - 132.66) + ",";
+        dataOutput += String(analogRead(A1) * 1.1358 - 132.66) + ",";
+        dataOutput += String(analogRead(A2) * 1.1358 - 132.66) + ",";
+        dataOutput += String(analogRead(A3) * 1.1358 - 132.66) + ",";
+        dataOutput += String(analogRead(A4) * 1.1358 - 132.66) + ",";
+        dataOutput += String(analogRead(A5) * 1.1358 - 132.66) + ",";
+        dataOutput += String(analogRead(A11) * 1.1358 - 132.66) + ",";
+        */
+        
+        dataOutput += String(read_ADC()) + "\n";
+        
+      }
+      
+      output.print(dataOutput);  // Write to SD Card
+      output.close();
+            
+    }
+  }
+}
+void process(YunClient client)
+{
+  String command = client.readStringUntil('/');  // Parse string for first section
+  // remove newlines
+  command.replace("\n", "");
+  command.replace("\r", "");
+  //Serial.println(command);
+  if(command == "stop")
+  {
+    stop_command(client);
+    return;
+  }
+  if(command == "burn")
+  {
+    burn_command(client);
+    return;
+  }
+  if(command == "digital")
+  {
+    digital_command(client);
+    return;
+  }
+  if(command == "record")
+  {
+    record_command(client);
+    return;
+  }
+  if(command == "clear")
+  {
+    clear_command(client);
+    return; 
+  }
+}
+
+
+void stop_command(YunClient client)
+{
+  digitalWrite(sol1, LOW);
+  digitalWrite(sol2, LOW);
+  digitalWrite(sol3, LOW);
+  digitalWrite(sol4, LOW);
+  digitalWrite(pyro_fire, LOW);
+  digitalWrite(pyro_arm, LOW);
+  client.println("Ok");
+  event_log += String(millis() - record_start_time) + ",Stop\n";
+}
+
+
+void burn_command(YunClient client)
+{
+  digitalWrite(sol4, HIGH);  //open Ox Flow
+  delay(200);  //Delay .2 seconds before opening Ox flow
+  digitalWrite(sol3, HIGH);  //open Ox Flow
+  client.println("Ok");
+  event_log += String(millis() - record_start_time) + ",Burn\n";
+}
+  
+
+void digital_command(YunClient client)
+{
+  int pin = client.parseInt();
+  int value;
+  if (client.read() == '/')
+  {
+    value = client.parseInt();
+    digitalWrite(pin, value);
+  }
+  else
+  {
+    value = digitalRead(pin);
+  }
+  //server response
+  String response = String(pin) + "," + String(value);
+  client.println(response);
+  
+  // Add to event log if pin turned on
+  if(value == 1)
+  {
+    event_log += String(millis() - record_start_time) + ",Pin " + String(pin) + " on\n";
+  }
+  else
+  {
+    event_log += String(millis() - record_start_time) + ",Pin " + String(pin) + " off\n";
+  }
+}
+
+
+// Changes record state and opens/closes file
+void record_command(YunClient client)
+{
+  if(record)
+  {
+    record = false;
+    
+    File output = FileSystem.open("/mnt/sd/arduino/www/output.csv", FILE_APPEND);
+    if(output)
+    {
+      event_log = "\nTime [ms],Event\n" + event_log + "\n";
+      output.print(event_log);  // Write to SD Card
+      output.close();
+    }
+    event_log = "";   // Clear event log
+    client.println("Data Recording Stopped");
+  }
+  else
+  {
+    record = true;
+    calibrate_ADC();
+    record_start_time = millis();
+    client.println("Load cell has been tared.\nNow Recording Data");
+  }
+}
+
+
+//Clear output file
+void clear_command(YunClient client)
+{
+  FileSystem.remove("/mnt/sd/arduino/www/output.csv");
+  
+  File output = FileSystem.open("/mnt/sd/arduino/www/output.csv", FILE_WRITE);
+  
+  if(output)
+  {
+    output.println("Time [ms],P1,P2,P3,P4,P5,P6,P7,Force [lbs]");
+    output.close();
+  }
+  client.println("Output Cleared");
+}
+
+float read_ADC()
+{
+  boolean data_rdy = ADC_ready();
+  // Busy wait for ADC
+  while(!data_rdy)
+  {
+    data_rdy = ADC_ready();
+    delay(1);
+  }
+  
+  // Read Data
+  SPI.transfer(0x58);
+  output = 0;
+  for(int i = 0; i < 3; i++)
+  {
+    output = (output << 8) + SPI.transfer(READ_ONLY);  //Read in 3 bytes
+  }
+  
+  voltage = (output * (3.75 / 8388607.0 ) - 3.75) * (1000 / GAIN);
+  weight = voltage * 151.5;
+  
+  //Debug serial output
+  /*
+  Serial.println(output, DEC);
+  Serial.println( String(voltage) + " mV" );
+  Serial.println( String(voltage * 1000) + " microV" );
+  */
+  
+  //Serial.println( String(weight) + " lbs");
+  return weight;
+}
+
+
+boolean ADC_ready()
+{
+   SPI.transfer(READ_STATUS);
+   byte sr = SPI.transfer(READ_ONLY);
+   //Serial.println("  Status Register: " + String(sr, BIN));
+   if(sr & 0x80)
+   {
+     //Serial.println("    ADC Not ready");
+     return false;  // Not RDY bit set
+   }
+   return true;
+}
+
+
+
+void ADC_Setup()
+{
+  for(int i = 0; i < 5; i++)
+  {
+    SPI.transfer(RESET);  //total of 40 one's to reset ADC mode
+  }
+  delay(5);
+  
+  // Write to Configuration Register
+  SPI.transfer(WRITE_CONFIG);
+  for(int i = 0; i < 3; i++)
+  {
+    SPI.transfer(CONFIG[i]);
+  }
+  
+  calibrate_ADC();
+  
+  //SPI.transfer(0b01011100);  // Continuous Conversion Mode
+}
+
+
+void calibrate_ADC()
+{
+  // Zero-Scale Calibration
+  SPI.transfer(WRITE_MODE);
+  for(int i = 0; i < 3; i++)
+  {
+    SPI.transfer(CALIBRATE_MODE[i]);
+  }
+  
+  // Wait for calibration to complete
+  boolean data_rdy = ADC_ready();
+  while(!data_rdy)
+  {
+    data_rdy = ADC_ready();
+    delay(1);
+  }
+  
+  // Write to Mode Register
+  SPI.transfer(WRITE_MODE);
+  for(int i = 0; i < 3; i++)
+  {
+    SPI.transfer(MODE[i]);
+  }
+  
+  // Settling time
+  delay(200);
+}
+
+/*
+void check_settings()
+{
+  Serial.println("Config:");
+  // Read configuration register over SPI
+  SPI.transfer(READ_CONFIG);
+  for(int i = 0; i < 3; i++) in[i] = SPI.transfer(READ_ONLY);
+  
+  // Check read configuration register
+  for(int i = 0; i < 3; i++)
+  {
+    if(in[i] == CONFIG[i]) Serial.println("  Match");
+    else Serial.println("  Different");
+  }
+  
+  
+  Serial.println("Mode:");
+  SPI.transfer(READ_MODE);
+  for(int i = 0; i < 3; i++) in[i] = SPI.transfer(READ_ONLY);
+  
+  // Check read configuration register
+  for(int i = 0; i < 3; i++)
+  {
+    if(in[i] == MODE[i]) Serial.println("  Match");
+    else
+    {
+      Serial.print("  Should be: ");
+      Serial.println(MODE[i], BIN);
+      Serial.print("        Got: ");
+      Serial.println(in[i], BIN);
+    }
+  }
+}    
+*/
