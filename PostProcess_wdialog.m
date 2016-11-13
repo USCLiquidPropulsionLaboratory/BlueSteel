@@ -15,16 +15,15 @@
 %Clear variables used in this script and graph annotations
 clear T Tdata Pmax1 Pmax2 Pmax3 Pmax4 Pmax5 Pmax6 Pmax7 Fmax
 
-delete(findall(gcf,'Tag','Event 1 Textbox'))
-delete(findall(gcf,'Tag','Event 2 Textbox'))
-delete(findall(gcf,'Tag','Event 3 Textbox'))
 %Get comma separated value from user input
 [baseName, folder] = uigetfile('*.csv');
 fullFileName = fullfile(folder, baseName)
 
 %Import comma separated value data exactly as is into table variable T
+% Copy table T into Tdata for modification
 T = readtable(fullFileName);
 Tdata = T;
+
 %Determine if columns hold mixed data types - if yes convert to double data
 %type, else leave in double format
 %Convert time from milliseconds to seconds
@@ -35,11 +34,12 @@ else
     Tdata.(1) = T.(1)/1000; 
     Tdata.(2) = T.(2);
 end
-
+% Create variable for time
 time = Tdata.(1);
 
-%Create index to find where data is NaN
+% Create index to find where data is NaN
 idx = find(ismissing(time)==1);
+% Create variables for max values
 P1max = find(Tdata.(2) == max(Tdata.(2)));
 P2max = find(Tdata.(3) == max(Tdata.(3)));
 P3max = find(Tdata.(4) == max(Tdata.(4)));
@@ -77,8 +77,8 @@ annotation('textbox', [time(idx(1)+4)/time(idx(1)-1), .065, 0, 0], ...
 %Create counter for looping through event information
 i = idx+2;
 
-%Plot events on graph
-%% Figure out line function
+% Plot events on graph
+% Figure out line function
 for i = i:length(time)
 line(time(i)*[1 1], get(gca,'YLim'),'Color','r','LineStyle',':')
 i+1;
