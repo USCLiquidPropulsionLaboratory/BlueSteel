@@ -8,6 +8,7 @@
 %   tables of max & avg values
 %   nominal profiles
 %   GUI
+%   Convert Force thrust from lbs to Newtons
 % - Becca Rogers
 %  rarogers@usc.edu
 % Date Modified: 11/12/2016
@@ -32,7 +33,8 @@ end
 time = Tdata.(1);
 
 %Create index to find where data is NaN
-idx = find(ismissing(time)==1);
+%{use isnan function instead of ismissing for 2016a compatibility}
+idx = find(isnan(time));
 P1max = find(Tdata.(2) == max(Tdata.(2)));
 P2max = find(Tdata.(3) == max(Tdata.(3)));
 P3max = find(Tdata.(4) == max(Tdata.(4)));
@@ -55,19 +57,24 @@ plot(time,Tdata.(2),time(P1max),Tdata.(2)(P1max),'dr','linewidth',0.75)
 legend(char(T.Properties.VariableNames(2)),['P1 max: ' num2str(Tdata.(2)(P1max)) ' psi'])
 xlim([time(1) time(idx(1)-1)])
 xlabel('Time [s]')
+axPos = get(gca,'Position')
 ylabel('Pressure [psi]')
 title('Pressure Transducer 1')
-annotation('textbox',[time(idx(1)+2)/(2*time(idx(1)-1))+.1,0.065,0,0] ,...
+%Create LHS annotations for Events 1 2 3
+annotation('textbox',...
+    [(time(idx(1)+2)/(time(idx(1)-1)))*(axPos(3))+axPos(1), 0.065, 0, 0] ,...
     'string', T.(2)(idx(1)+2),...
     'FitBoxToText','on',...
     'HorizontalAlignment','center',...
     'tag', 'Event 1 Textbox')
-annotation('textbox', [time(idx(1)+3)/time(idx(1)-1)+.05, .065, 0, 0], ...
+annotation('textbox',...
+    [(time(idx(1)+3)/(time(idx(1)-1)))*(axPos(3))+axPos(1), 0.065, 0, 0], ...
     'string', T.(2)(idx(1)+3),...
     'FitBoxToText','on',...
     'HorizontalAlignment','center',...
     'tag', 'Event 2 Textbox')
-annotation('textbox', [time(idx(1)+4)/time(idx(1)-1), .065, 0, 0], ...
+annotation('textbox',...
+    [(time(idx(1)+4)/(time(idx(1)-1)))*(axPos(3))+axPos(1), 0.065, 0, 0], ...
     'string', T.(2)(idx(1)+4),...
     'FitBoxToText','on',...
     'HorizontalAlignment','center',...
@@ -85,7 +92,7 @@ end
 
 
 %Manually plot Pressure Transducer 2 data
-subplot(4,2,2)
+subplot(4,2,3)
 plot(time,Tdata.(3),time(P2max),Tdata.(3)(P2max),'dr','linewidth',0.75)
 legend(char(T.Properties.VariableNames(3)),['P2 max: ' num2str(Tdata.(3)(P2max(1))) ' psi'])
 xlim([time(1) time(idx(1)-1)])
@@ -106,7 +113,7 @@ end
 
 
 %Manually plot Pressure Transducer 3 data
-subplot(4,2,3)
+subplot(4,2,5)
 plot(time,Tdata.(4),time(P3max),Tdata.(4)(P3max),'dr','linewidth',0.75)
 legend(char(T.Properties.VariableNames(4)),['P3 max: ' num2str(Tdata.(4)(P3max(1))) ' psi'])
 xlim([time(1) time(idx(1)-1)])
@@ -127,7 +134,7 @@ end
 
 
 %Manually plot Pressure Transducer 4 data
-subplot(4,2,4)
+subplot(4,2,7)
 plot(time,Tdata.(5),time(P4max),Tdata.(5)(P4max),'dr','linewidth',0.75)
 legend(char(T.Properties.VariableNames(5)),['P4 max: ' num2str(Tdata.(5)(P4max)) ' psi'])
 xlim([time(1) time(idx(1)-1)])
@@ -148,7 +155,7 @@ end
 
 
 %Manually plot Pressure Transducer 5 data
-subplot(4,2,5)
+subplot(4,2,2)
 plot(time,Tdata.(6),time(P5max),Tdata.(6)(P5max),'dr','linewidth',0.75)
 legend(char(T.Properties.VariableNames(6)),['P5 max: ' num2str(Tdata.(6)(P5max)) ' psi'])
 xlim([time(1) time(idx(1)-1)])
@@ -169,7 +176,7 @@ end
 
 
 %Manually plot Pressure Transducer 6 data
-subplot(4,2,6)
+subplot(4,2,4)
 plot(time,Tdata.(7),time(P6max),Tdata.(7)(P6max),'dr','linewidth',0.75)
 legend(char(T.Properties.VariableNames(7)),['P6 max: ' num2str(Tdata.(7)(P6max(1))) ' psi'])
 xlim([time(1) time(idx(1)-1)])
@@ -190,14 +197,34 @@ end
 
 
 %Manually plot Pressure Transducer 7 data
-subplot(4,2,7)
+subplot(4,2,6)
 plot(time,Tdata.(8),time(P7max),Tdata.(8)(P7max),'dr','linewidth',0.75)
 legend(char(T.Properties.VariableNames(8)),['P7 max: ' num2str(Tdata.(8)(P7max)) ' psi'])
 xlim([time(1) time(idx(1)-1)])
 xlabel('Time [s]')
+axPos = get(gca,'Position')
 ylabel('Pressure [psi]')
 title('Pressure Transducer 7')
 
+%Create RHS annotations for Events 1 2 3
+annotation('textbox',...
+    [(time(idx(1)+2)/(time(idx(1)-1)))*(axPos(3))+axPos(1), 0.065, 0, 0] ,...
+    'string', T.(2)(idx(1)+2),...
+    'FitBoxToText','on',...
+    'HorizontalAlignment','center',...
+    'tag', 'Event 1 Textbox')
+annotation('textbox',...
+    [(time(idx(1)+3)/(time(idx(1)-1)))*(axPos(3))+axPos(1), 0.065, 0, 0], ...
+    'string', T.(2)(idx(1)+3),...
+    'FitBoxToText','on',...
+    'HorizontalAlignment','center',...
+    'tag', 'Event 2 Textbox')
+annotation('textbox',...
+    [(time(idx(1)+4)/(time(idx(1)-1)))*(axPos(3))+axPos(1), 0.065, 0, 0], ...
+    'string', T.(2)(idx(1)+4),...
+    'FitBoxToText','on',...
+    'HorizontalAlignment','center',...
+    'tag', 'Event 3 Textbox')
 
 %Create counter for looping through event information
 i = idx+2;
@@ -217,6 +244,7 @@ plot(time,Tdata.(9),time(Fmax),Tdata.(9)(Fmax),'dr','linewidth',0.75)
 legend(char(T.Properties.VariableNames(9)),['Force max: ' num2str(Tdata.(9)(Fmax)) ' [lbs]'])
 xlabel('Time [s]')
 ylabel('Force [lbs]')
+title('Thrust')
 
 %Reset counter
 i = idx+2;
