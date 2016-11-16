@@ -18,6 +18,7 @@
 
 %Clear variables used in this script
 clc
+clear
 
 %Import comma separated value data exactly as is into table variable T
 T = readtable('9-17-16 firing.csv');
