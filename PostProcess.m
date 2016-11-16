@@ -13,11 +13,8 @@
 % Date Modified: 11/12/2016
 
 %Clear variables used in this script
-clear T Tdata Tburn time BurnTime StopTime BurnTimeIdx StopTimeIdx
-clear MaxVal MaxValIdx MaxValTime
-clear MaxBurnVal MaxBurnValIdx MaxBurnValTime
-clear AvgBurnVal AvgBurn AvgVal timeBurn
-clear MaxBurnValTable MaxValTable AvgBurnValTable AvgValTable
+clc
+clear
 
 %Import comma separated value data exactly as is into table variable T
 T = readtable('9-17-16 firing.csv');
