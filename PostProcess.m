@@ -18,7 +18,6 @@
 
 %Clear variables used in this script
 clc
-clear
 
 %Import comma separated value data exactly as is into table variable T
 T = readtable('9-17-16 firing.csv');
@@ -376,3 +375,11 @@ xlim([timeBurn(1) time(end)])
 xlabel('Time [s]')
 ylabel('Force [N]')
 title('Thrust during Burn Time')
+set(h1, 'ButtonDownFcn', @mycallbackfcn)
+set(h2, 'ButtonDownFcn', @mycallbackfcn2)
+set(h3, 'ButtonDownFcn', @mycallbackfcn3)
+set(h4, 'ButtonDownFcn', @mycallbackfcn4)
+set(h5, 'ButtonDownFcn', @mycallbackfcn5)
+set(h6, 'ButtonDownFcn', @mycallbackfcn6)
+set(h7, 'ButtonDownFcn', @mycallbackfcn7)
+set(h8, 'ButtonDownFcn', @mycallbackfcn8)
