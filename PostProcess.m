@@ -57,13 +57,13 @@ DataEndIdx = find(isnan(time));
 %Create array to hold nominal values, assign them
 Nominal = zeros(width(Tdata),1);
 Nominal(2) = 200; %Value for PT1 (psi)
-Nominal(3) = 1400; %Value for PT2 (psi)
+Nominal(3) = 400; %Value for PT2 (psi)
 Nominal(4) = 400; %Value for PT3 (psi)
 Nominal(5) = 400; %Value for PT4 (psi)
 Nominal(6) = 400; %Value for PT5 (psi)
 Nominal(7) = 400; %Value for PT6 (psi)
-Nominal(8) = 818.9; %Value for PT7 (psi)
-Nominal(9) = 4550; %Value for FT (N)
+Nominal(8) = 400; %Value for PT7 (psi)
+Nominal(9) = 400; %Value for FT (N)
 %Create time reference to plot nominal values
 %Create array with nominal values for plotting, assign correspondingly
 NomTime = [0,BurnTime,BurnTime,StopTime,StopTime,time(DataEndIdx(1)-1)];
