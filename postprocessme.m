@@ -6,15 +6,15 @@
 %       with max values and notable events
 %  Subplots of Force and Pressure plots
 %  Table with max and average values
+%  Graph of ISP
 %
 % To be implemented:
 %   more accurate nominal profiles
-%   ISP graph
 %   Improved labels for PTs
 %   interface with DAQ GUI
 % - Becca Rogers
 %  rarogers@usc.edu
-% Date Modified: 11/18/2016
+% Date Modified: 12/2/2016z
 
 %Clear variables used in this script
 clc
@@ -44,9 +44,7 @@ else
     Tdata.(2) = T.(2);
 end
 
-%Convert force from lbs to Newtons
-Tdata.(9) = T.(9)*4.44822; % Newtons
-T.Properties.VariableNames(9) = {'Force'};
+
 
 %Create index for burn and stop events
 BurnTimeIdx = find(Tdata.(1)>BurnTime,1,'first');
@@ -66,12 +64,21 @@ for iCol=2:1:width(Tdata)
 Nominal(iCol) = NominalTable{1,iCol};
 end
 
-%Create logical variable for table
+%Convert force from lbs to Newtons
+Tdata.(9) = T.(9)*4.44822; % Newtons
+Nominal(9) = Nominal(9)*4.44822; %Newtons
+T.Properties.VariableNames(9) = {'Force'};
+
+%Create logical array for table of values and ISP graph
 global yesTable
 %Create logical array for individual PT & Force plots over all time
 global yesGraph
 %Create logical array for PT & Force plots over burn time
 global yesGraphBurn
+
+% Set mass flow variables and gravitational constant
+mdot = 1.055; %kg/s
+ge = 9.80665; %m/s^2
 
 %Create time reference to plot nominal values
 %Create array with nominal values for plotting, assign correspondingly
@@ -105,7 +112,7 @@ for jCol=2:1:width(Tdata)
    AvgBurnVal(jCol) = mean(Tburn.(jCol),'omitnan');
 end
 %%
-if yesTable == 1
+if yesTable(1) == 1
 
     %Create figure with tables of max & avg values
 f2 = figure('position',[100, 100, 575, 225]);
@@ -278,4 +285,15 @@ for iLoop = 1:1:2 %Run twice
     end
     end
 
+end
+%%
+% Create graph to plot ISP = F_T/(mdot*ge) %seconds
+if yesTable(2)==1
+    figure;
+    plot(time,Tdata.(9)/(mdot*ge))
+    legend('ISP')
+    xlim([time(1) time(DataEndIdx(1)-1)])
+    xlabel('Time [s]')
+    ylabel('ISP [s]')
+    title('ISP')
 end
